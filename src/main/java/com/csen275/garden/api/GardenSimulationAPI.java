@@ -46,8 +46,6 @@ public class GardenSimulationAPI {
             engine = new SimulationEngine(garden, logger, modules);
             engine.start();
 
-            logger.log(0, "INIT", "config_loaded", garden.getLivingCount());
-
         } catch (Exception e) {
             logger.log(0, "ERROR", "initializeGarden: " + e.getMessage(), 0);
         }
