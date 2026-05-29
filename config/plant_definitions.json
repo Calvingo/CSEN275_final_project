@@ -1,0 +1,12 @@
+{
+  "Rose":       { "waterRequirement": 10, "healRate": 2, "parasites": ["aphid", "spider_mite"] },
+  "Tomato":     { "waterRequirement": 15, "healRate": 3, "parasites": ["aphid", "hornworm"] },
+  "Sunflower":  { "waterRequirement": 8,  "healRate": 2, "parasites": ["aphid"] },
+  "Basil":      { "waterRequirement": 12, "healRate": 4, "parasites": ["aphid", "whitefly"] },
+  "Lavender":   { "waterRequirement": 5,  "healRate": 1, "parasites": ["spider_mite"] },
+  "Marigold":   { "waterRequirement": 7,  "healRate": 2, "parasites": ["spider_mite", "thrip"] },
+  "Lettuce":    { "waterRequirement": 14, "healRate": 3, "parasites": ["aphid", "slug"] },
+  "Pepper":     { "waterRequirement": 13, "healRate": 3, "parasites": ["hornworm", "aphid"] },
+  "Daisy":      { "waterRequirement": 9,  "healRate": 2, "parasites": ["thrip", "whitefly"] },
+  "OakSapling": { "waterRequirement": 6,  "healRate": 1, "parasites": ["bark_beetle"] }
+}
