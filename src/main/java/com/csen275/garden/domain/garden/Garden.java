@@ -1,10 +1,15 @@
 package com.csen275.garden.domain.garden;
 
+import com.csen275.garden.config.ConfigLoader;
+import com.csen275.garden.config.GardenConfig;
+import com.csen275.garden.config.PlantDefinitionConfig;
 import com.csen275.garden.domain.plant.PlantInstance;
 import com.csen275.garden.domain.plant.PlantType;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Garden {
 
@@ -69,6 +74,25 @@ public class Garden {
 
     public List<PlantInstance> getLivingPlants() {
         return livingPlants;
+    }
+
+    public void loadFromConfig(GardenConfig gardenConfig, Map<String, PlantDefinitionConfig> definitions) {
+        for (GardenConfig.PlantEntry entry : gardenConfig.getPlants()) {
+            PlantDefinitionConfig def = definitions.get(entry.getName());
+            if (def == null) {
+                continue;
+            }
+            PlantType type = new PlantType(
+                entry.getName(),
+                def.getWaterRequirement(),
+                def.getHealRate(),
+                def.getParasites()
+            );
+            for (int i = 0; i < entry.getAmount(); i++) {
+                PlantInstance instance = type.createInstance();
+                placePlantOnGrid(instance);
+            }
+        }
     }
 
     public GardenGrid getGrid() {
