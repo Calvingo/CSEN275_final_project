@@ -95,6 +95,13 @@ public class Garden {
         }
     }
 
+    public void tickDay() {
+        for (Plot plot : grid.getAllPlots()) {
+            plot.tickDay();
+        }
+        removeDead();
+    }
+
     public GardenGrid getGrid() {
         return grid;
     }
