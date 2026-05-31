@@ -19,11 +19,15 @@ public class ClimateSystem implements GardenModule {
     private Garden garden;
     private LoggingService logger;
     private int currentTempF;
+    private boolean heatingActive;
+    private boolean coolingActive;
 
     public ClimateSystem(Garden garden, LoggingService logger) {
         this.garden = garden;
         this.logger = logger;
         this.currentTempF = DEFAULT_TEMP;
+        this.heatingActive = false;
+        this.coolingActive = false;
     }
 
     @Override
@@ -33,7 +37,7 @@ public class ClimateSystem implements GardenModule {
 
     @Override
     public void onDayStart(int day) {
-        // nothing to do at start of day
+        // Temperature is applied via events and reset at day end.
     }
 
     @Override
@@ -54,8 +58,18 @@ public class ClimateSystem implements GardenModule {
             logger.log(day, "ERROR", "ClimateSystem: invalid temperature " + tempF, garden.getLivingCount());
             return;
         }
+
         currentTempF = tempF;
+        heatingActive = tempF < COLD_THRESHOLD;
+        coolingActive = tempF > HOT_THRESHOLD;
+
         logger.log(day, "TEMPERATURE", String.valueOf(tempF), garden.getLivingCount());
+
+        if (heatingActive) {
+            logger.log(day, "CLIMATE_CONTROL", "heating_active temp=" + tempF, garden.getLivingCount());
+        } else if (coolingActive) {
+            logger.log(day, "CLIMATE_CONTROL", "cooling_active temp=" + tempF, garden.getLivingCount());
+        }
     }
 
     public void applyThermalStress(int day) {
@@ -71,25 +85,41 @@ public class ClimateSystem implements GardenModule {
                 if (stress < 1) {
                     stress = 1;
                 }
+                if (coolingActive) {
+                    stress = Math.max(1, stress / 2);
+                }
                 plant.applyStress(stress);
             } else if (currentTempF < COLD_THRESHOLD) {
                 int stress = (COLD_THRESHOLD - currentTempF) / 5;
                 if (stress < 1) {
                     stress = 1;
                 }
+                if (heatingActive) {
+                    stress = Math.max(1, stress / 2);
+                }
                 plant.applyStress(stress);
             }
         }
 
-        garden.removeDead();
+        garden.removeDeadAndLog(logger, day);
     }
 
     public void resetDaily(int day) {
         currentTempF = DEFAULT_TEMP;
+        heatingActive = false;
+        coolingActive = false;
         logger.log(day, "DAY_END", "temp_reset day=" + day, garden.getLivingCount());
     }
 
     public int getCurrentTempF() {
         return currentTempF;
+    }
+
+    public boolean isHeatingActive() {
+        return heatingActive;
+    }
+
+    public boolean isCoolingActive() {
+        return coolingActive;
     }
 }

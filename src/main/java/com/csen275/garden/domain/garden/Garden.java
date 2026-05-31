@@ -1,12 +1,10 @@
 package com.csen275.garden.domain.garden;
 
-import com.csen275.garden.config.ConfigLoader;
 import com.csen275.garden.config.GardenConfig;
 import com.csen275.garden.config.PlantDefinitionConfig;
 import com.csen275.garden.domain.plant.PlantInstance;
 import com.csen275.garden.domain.plant.PlantType;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,17 +44,35 @@ public class Garden {
         }
     }
 
-    public void removeDead() {
+    public List<String> removeDead() {
         List<PlantInstance> toRemove = new ArrayList<PlantInstance>();
+        List<String> deaths = new ArrayList<String>();
+
         for (PlantInstance p : livingPlants) {
             if (!p.isAlive()) {
                 toRemove.add(p);
+                deaths.add(formatPlantLocation(p));
             }
         }
+
         for (PlantInstance p : toRemove) {
             livingPlants.remove(p);
             clearFromGrid(p);
         }
+
+        return deaths;
+    }
+
+    private String formatPlantLocation(PlantInstance plant) {
+        for (int row = 0; row < grid.getRows(); row++) {
+            for (int col = 0; col < grid.getCols(); col++) {
+                Plot plot = grid.getPlot(row, col);
+                if (plot.getPlant() == plant) {
+                    return plant.getType().getName() + "@plot(" + row + "," + col + ")";
+                }
+            }
+        }
+        return plant.getType().getName() + "@plot(unknown)";
     }
 
     private void clearFromGrid(PlantInstance plant) {
@@ -95,11 +111,19 @@ public class Garden {
         }
     }
 
-    public void tickDay() {
+    public List<String> tickDay() {
         for (Plot plot : grid.getAllPlots()) {
             plot.tickDay();
         }
-        removeDead();
+        return removeDead();
+    }
+
+    public List<String> removeDeadAndLog(com.csen275.garden.logging.LoggingService logger, int day) {
+        List<String> deaths = removeDead();
+        for (String death : deaths) {
+            logger.log(day, "PLANT_DEATH", death, getLivingCount());
+        }
+        return deaths;
     }
 
     public GardenGrid getGrid() {

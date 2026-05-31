@@ -64,8 +64,9 @@ class GardenGridTest {
         Plot plot = new Plot();
         PlantInstance p = tomato.createInstance();
         plot.setPlant(p);
+        int before = p.getWaterLevel();
         plot.applyWater(30);
-        assertEquals(30, p.getWaterLevel());
+        assertEquals(before + 30, p.getWaterLevel());
         assertEquals(50, plot.getSoilMoisture()); // started at 20, added 30
     }
 

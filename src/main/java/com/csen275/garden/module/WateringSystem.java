@@ -15,12 +15,12 @@ public class WateringSystem implements GardenModule {
 
     private Garden garden;
     private LoggingService logger;
-    private boolean rainedToday;
+    private boolean rainDuringCurrentDay;
 
     public WateringSystem(Garden garden, LoggingService logger) {
         this.garden = garden;
         this.logger = logger;
-        this.rainedToday = false;
+        this.rainDuringCurrentDay = false;
     }
 
     @Override
@@ -30,14 +30,18 @@ public class WateringSystem implements GardenModule {
 
     @Override
     public void onDayStart(int day) {
-        rainedToday = false;
+        // Rain tracking is cleared at the end of the previous day in onDayEnd.
     }
 
     @Override
     public void onDayEnd(int day) {
-        if (!rainedToday) {
+        activateSprinklers(day);
+
+        if (!rainDuringCurrentDay) {
             resetDailyMoisture();
         }
+
+        rainDuringCurrentDay = false;
     }
 
     @Override
@@ -48,7 +52,7 @@ public class WateringSystem implements GardenModule {
     }
 
     public void handleRain(int day, int amount) {
-        rainedToday = true;
+        rainDuringCurrentDay = true;
 
         List<Plot> plots = garden.getGrid().getAllPlots();
 
@@ -62,10 +66,18 @@ public class WateringSystem implements GardenModule {
     public void activateSprinklers(int day) {
         List<Plot> plots = garden.getGrid().getAllPlots();
 
-        for (Plot plot : plots) {
-            if (plot.getSoilMoisture() < DRY_THRESHOLD) {
-                plot.applyWater(SPRINKLER_WATER_AMOUNT);
-                logger.log(day, "SPRINKLER", "moisture_low water=" + SPRINKLER_WATER_AMOUNT, garden.getLivingCount());
+        for (int row = 0; row < garden.getGrid().getRows(); row++) {
+            for (int col = 0; col < garden.getGrid().getCols(); col++) {
+                Plot plot = garden.getGrid().getPlot(row, col);
+                if (plot.getSoilMoisture() < DRY_THRESHOLD) {
+                    plot.applyWater(SPRINKLER_WATER_AMOUNT);
+                    logger.log(
+                        day,
+                        "SPRINKLER",
+                        "plot(" + row + "," + col + ") water=" + SPRINKLER_WATER_AMOUNT,
+                        garden.getLivingCount()
+                    );
+                }
             }
         }
     }
@@ -81,6 +93,6 @@ public class WateringSystem implements GardenModule {
     }
 
     public boolean isRainedToday() {
-        return rainedToday;
+        return rainDuringCurrentDay;
     }
 }

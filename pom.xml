@@ -24,6 +24,16 @@
         <!-- JavaFX -->
         <dependency>
             <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
         </dependency>
@@ -74,7 +84,8 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.csen275.garden.app.GardenApp</mainClass>
+                    <mainClass>com.csen275.garden.app.GardenLauncher</mainClass>
+                    <runtimePathOption>CLASSPATH</runtimePathOption>
                 </configuration>
             </plugin>
 

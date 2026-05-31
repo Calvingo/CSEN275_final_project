@@ -26,6 +26,10 @@ DAY, EVENT, EVENT_VALUE, PLANTS_ALIVE
 | RAIN         | `rain(int)` called                                | `25`                                    |
 | TEMPERATURE  | `temperature(int)` called                         | `105`                                   |
 | PARASITE     | `parasite(String)` called                         | `aphid`                                 |
+| FERTILIZER | FertilizerSystem treats low-nutrient plots | `plot(2,1) nutrients=45` |
+| NUTRIENT_CHECK | Many plots below nutrient threshold | `low_plots=6` |
+| MANUAL_FERTILIZER | User applies fertilizer from GUI | `user_triggered` |
+| CLIMATE_CONTROL | Heating or cooling activated for extreme temperature | `cooling_active temp=105` |
 | PLANT_DEATH  | A plant's health drops to 0                       | `Rose@plot(1,2)`                        |
 | SPRINKLER    | Sprinkler activated by WateringSystem             | `plot(0,0) water=15`                    |
 | STATE        | `getState()` called                               | `alive=8 plants=[Rose(health=72) ...]`  |

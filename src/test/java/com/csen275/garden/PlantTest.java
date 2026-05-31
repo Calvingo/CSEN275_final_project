@@ -36,8 +36,9 @@ class PlantTest {
 
     @Test
     void applyWaterIncreasesWaterLevel() {
+        int before = rose.getWaterLevel();
         rose.applyWater(20);
-        assertEquals(20, rose.getWaterLevel());
+        assertEquals(before + 20, rose.getWaterLevel());
     }
 
     @Test
@@ -51,15 +52,16 @@ class PlantTest {
         rose.applyStress(20);
         int healthBefore = rose.getHealth();
         rose.applyWater(50);
-        rose.tickNaturalRecovery();
+        rose.tickNaturalRecovery(0);
         assertTrue(rose.getHealth() > healthBefore);
     }
 
     @Test
     void noRecoveryWhenUnderwatered() {
         rose.applyStress(20);
+        rose.applyWater(-rose.getWaterLevel());
         int healthBefore = rose.getHealth();
-        rose.tickNaturalRecovery();
+        rose.tickNaturalRecovery(0);
         assertEquals(healthBefore, rose.getHealth());
     }
 
@@ -67,7 +69,7 @@ class PlantTest {
     void deadPlantDoesNotRecover() {
         rose.applyStress(100);
         rose.applyWater(100);
-        rose.tickNaturalRecovery();
+        rose.tickNaturalRecovery(0);
         assertFalse(rose.isAlive());
     }
 
@@ -75,7 +77,7 @@ class PlantTest {
     void tickDailyReducesWaterAndStressesIfDry() {
         int healthBefore = rose.getHealth();
         for (int i = 0; i < 5; i++) {
-            rose.tickDaily();
+            rose.tickDaily(50);
         }
         assertTrue(rose.getHealth() < healthBefore);
     }

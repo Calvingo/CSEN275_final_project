@@ -7,6 +7,7 @@ import com.csen275.garden.domain.garden.Garden;
 import com.csen275.garden.event.GardenEvent;
 import com.csen275.garden.logging.LoggingService;
 import com.csen275.garden.module.ClimateSystem;
+import com.csen275.garden.module.FertilizerSystem;
 import com.csen275.garden.module.GardenModule;
 import com.csen275.garden.module.PestControlSystem;
 import com.csen275.garden.module.WateringSystem;
@@ -45,6 +46,7 @@ class SimulationEngineTest {
         modules.add(new WateringSystem(garden, logger));
         modules.add(new ClimateSystem(garden, logger));
         modules.add(new PestControlSystem(garden, logger));
+        modules.add(new FertilizerSystem(garden, logger));
 
         engine = new SimulationEngine(garden, logger, modules);
     }

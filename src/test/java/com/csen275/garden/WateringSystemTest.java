@@ -59,9 +59,10 @@ class WateringSystemTest {
     }
 
     @Test
-    void onDayStartResetsRainFlag() {
+    void onDayEndClearsRainFlagForNextDay() {
         watering.handleRain(1, 10);
-        watering.onDayStart(2);
+        assertTrue(watering.isRainedToday());
+        watering.onDayEnd(1);
         assertFalse(watering.isRainedToday());
     }
 

@@ -39,6 +39,8 @@ class HeadlessSimulationRunnerTest {
             }
 
             api.getState();
+            int alive = ((List<String>) api.getPlants().get("plants")).size();
+            assertTrue(alive > 0, "Garden should still have living plants after 24 simulated days");
         });
     }
 

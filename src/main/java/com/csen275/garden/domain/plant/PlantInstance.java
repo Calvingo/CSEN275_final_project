@@ -13,7 +13,7 @@ public class PlantInstance {
         this.id = id;
         this.type = type;
         this.health = 100;
-        this.waterLevel = 0;
+        this.waterLevel = type.getWaterRequirement();
         this.stage = GrowthStage.GROWING;
         this.alive = true;
     }
@@ -44,12 +44,23 @@ public class PlantInstance {
         }
     }
 
-    public void tickNaturalRecovery() {
+    public void applyRecovery(int amount) {
+        if (!alive || amount <= 0) {
+            return;
+        }
+        health = health + amount;
+        if (health > 100) {
+            health = 100;
+        }
+        updateStageFromHealth();
+    }
+
+    public void tickNaturalRecovery(int nutrientBonus) {
         if (!alive) {
             return;
         }
         if (waterLevel >= type.getWaterRequirement() && health < 100) {
-            health = health + type.getHealRate();
+            health = health + type.getHealRate() + nutrientBonus;
             if (health > 100) {
                 health = 100;
             }
@@ -57,13 +68,13 @@ public class PlantInstance {
                 stage = GrowthStage.RECOVERING;
             }
         }
+        updateStageFromHealth();
     }
 
-    public void tickDaily() {
+    public void tickDaily(int nutrientLevel) {
         if (!alive) {
             return;
         }
-        // Plants lose water each day; if under-watered they take stress
         waterLevel = waterLevel - 5;
         if (waterLevel < 0) {
             waterLevel = 0;
@@ -71,19 +82,24 @@ public class PlantInstance {
         if (waterLevel < type.getWaterRequirement()) {
             applyStress(3);
         } else {
-            tickNaturalRecovery();
+            int nutrientBonus = nutrientLevel >= 30 ? 1 : 0;
+            tickNaturalRecovery(nutrientBonus);
         }
-        // Update stage based on health
-        if (alive) {
-            if (health >= 80) {
-                stage = GrowthStage.MATURE;
-            } else if (health >= 60) {
-                stage = GrowthStage.GROWING;
-            } else if (health >= 30) {
-                stage = GrowthStage.STRESSED;
-            } else {
-                stage = GrowthStage.DYING;
-            }
+        updateStageFromHealth();
+    }
+
+    private void updateStageFromHealth() {
+        if (!alive) {
+            return;
+        }
+        if (health >= 80) {
+            stage = GrowthStage.MATURE;
+        } else if (health >= 60) {
+            stage = GrowthStage.GROWING;
+        } else if (health >= 30) {
+            stage = GrowthStage.STRESSED;
+        } else {
+            stage = GrowthStage.DYING;
         }
     }
 

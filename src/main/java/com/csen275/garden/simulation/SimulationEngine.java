@@ -40,7 +40,10 @@ public class SimulationEngine {
         }
 
         try {
-            garden.tickDay();
+            List<String> deaths = garden.tickDay();
+            for (String death : deaths) {
+                logger.log(day, "PLANT_DEATH", death, garden.getLivingCount());
+            }
         } catch (Exception e) {
             logger.log(day, "ERROR", "TICK_DAY: " + e.getMessage(), garden.getLivingCount());
         }

@@ -82,9 +82,9 @@ class PestControlSystemTest {
 
         // Water the plant so it can recover
         vulnerable.applyWater(50);
-        vulnerable.tickNaturalRecovery();
-        vulnerable.tickNaturalRecovery();
-        vulnerable.tickNaturalRecovery();
+        vulnerable.tickNaturalRecovery(1);
+        vulnerable.tickNaturalRecovery(1);
+        vulnerable.tickNaturalRecovery(1);
 
         assertTrue(vulnerable.getHealth() > healthAfterParasite);
     }
