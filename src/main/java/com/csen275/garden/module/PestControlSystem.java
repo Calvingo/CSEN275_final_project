@@ -1,6 +1,7 @@
 package com.csen275.garden.module;
 
 import com.csen275.garden.domain.garden.Garden;
+import com.csen275.garden.domain.insect.Parasite;
 import com.csen275.garden.domain.plant.PlantInstance;
 import com.csen275.garden.event.EventType;
 import com.csen275.garden.event.GardenEvent;
@@ -21,13 +22,13 @@ public class PestControlSystem implements GardenModule {
 
     private Garden garden;
     private LoggingService logger;
-    private List<String> activeParasites;
+    private List<Parasite> activeParasites;
     private Set<String> treatedPlantIds;
 
     public PestControlSystem(Garden garden, LoggingService logger) {
         this.garden = garden;
         this.logger = logger;
-        this.activeParasites = new ArrayList<String>();
+        this.activeParasites = new ArrayList<Parasite>();
         this.treatedPlantIds = new HashSet<String>();
     }
 
@@ -55,14 +56,15 @@ public class PestControlSystem implements GardenModule {
     }
 
     public void triggerParasite(int day, String parasiteName) {
-        activeParasites.add(parasiteName);
+        Parasite parasite = new Parasite(parasiteName, PARASITE_DAMAGE);
+        activeParasites.add(parasite);
 
         List<PlantInstance> plants = garden.getLivingPlants();
 
         for (PlantInstance plant : plants) {
             List<String> vulnerabilities = plant.getType().getParasites();
-            if (vulnerabilities.contains(parasiteName)) {
-                plant.applyStress(PARASITE_DAMAGE);
+            if (vulnerabilities.contains(parasite.getName())) {
+                plant.applyStress(parasite.getDamage());
             }
         }
 
@@ -110,10 +112,10 @@ public class PestControlSystem implements GardenModule {
 
         List<PlantInstance> plants = garden.getLivingPlants();
 
-        for (String parasite : activeParasites) {
+        for (Parasite parasite : activeParasites) {
             for (PlantInstance plant : plants) {
                 List<String> vulnerabilities = plant.getType().getParasites();
-                if (vulnerabilities.contains(parasite)
+                if (vulnerabilities.contains(parasite.getName())
                     && !treatedPlantIds.contains(plant.getId())) {
                     plant.applyStress(FOLLOW_UP_DAMAGE);
                 }
@@ -126,6 +128,10 @@ public class PestControlSystem implements GardenModule {
     }
 
     public List<String> getActiveParasites() {
-        return activeParasites;
+        List<String> names = new ArrayList<String>();
+        for (Parasite parasite : activeParasites) {
+            names.add(parasite.getName());
+        }
+        return names;
     }
 }

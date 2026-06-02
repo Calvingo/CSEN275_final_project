@@ -94,7 +94,7 @@ See `docs/log-guide.md` for every event type.
 
 | Problem | Fix |
 |---------|-----|
-| `mvn javafx:run` fails with JavaFX errors | Use Java 17+; ensure `pom.xml` JavaFX plugin `mainClass` is `com.csen275.garden.app.GardenApp` |
+| `mvn javafx:run` fails with JavaFX errors | Use Java 17+; ensure `pom.xml` JavaFX plugin `mainClass` is `com.csen275.garden.app.GardenLauncher` |
 | Grid stays empty | Click **Initialize** first |
 | `log.txt` empty | Initialize or trigger any simulation action |
 | No empty plots for new plants | Grid is 5×5; remove dead plants by letting simulation run or restart with Initialize |

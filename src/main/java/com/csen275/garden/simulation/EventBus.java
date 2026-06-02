@@ -6,15 +6,22 @@ import com.csen275.garden.module.GardenModule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntSupplier;
 
 public class EventBus {
 
     private List<GardenModule> subscribers;
     private LoggingService logger;
+    private IntSupplier aliveCountSupplier;
 
     public EventBus(LoggingService logger) {
+        this(logger, () -> 0);
+    }
+
+    public EventBus(LoggingService logger, IntSupplier aliveCountSupplier) {
         this.subscribers = new ArrayList<GardenModule>();
         this.logger = logger;
+        this.aliveCountSupplier = aliveCountSupplier;
     }
 
     public void subscribe(GardenModule module) {
@@ -30,7 +37,7 @@ public class EventBus {
                     event.getDay(),
                     "ERROR",
                     module.getName() + ": " + e.getMessage(),
-                    -1
+                    aliveCountSupplier.getAsInt()
                 );
             }
         }
@@ -41,7 +48,7 @@ public class EventBus {
             try {
                 module.onDayStart(day);
             } catch (Exception e) {
-                logger.log(day, "ERROR", module.getName() + " onDayStart: " + e.getMessage(), -1);
+                logger.log(day, "ERROR", module.getName() + " onDayStart: " + e.getMessage(), aliveCountSupplier.getAsInt());
             }
         }
     }
@@ -51,7 +58,7 @@ public class EventBus {
             try {
                 module.onDayEnd(day);
             } catch (Exception e) {
-                logger.log(day, "ERROR", module.getName() + " onDayEnd: " + e.getMessage(), -1);
+                logger.log(day, "ERROR", module.getName() + " onDayEnd: " + e.getMessage(), aliveCountSupplier.getAsInt());
             }
         }
     }

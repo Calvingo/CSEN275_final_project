@@ -9,6 +9,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class EventBusTest {
@@ -79,6 +83,24 @@ class EventBusTest {
 
         assertDoesNotThrow(() -> bus.publish(new GardenEvent(EventType.RAIN, 1, "10", 10)));
         assertEquals(1, countSafe[0]);
+    }
+
+    @Test
+    void exceptionLogUsesCurrentAliveCount() throws Exception {
+        bus = new EventBus(logger, () -> 12);
+
+        GardenModule crasher = new GardenModule() {
+            public String getName() { return "Crasher"; }
+            public void onDayStart(int day) {}
+            public void onDayEnd(int day) {}
+            public void onEvent(GardenEvent event) { throw new RuntimeException("crash"); }
+        };
+
+        bus.subscribe(crasher);
+        bus.publish(new GardenEvent(EventType.RAIN, 1, "10", 10));
+
+        List<String> lines = Files.readAllLines(Path.of("log.txt"));
+        assertEquals("1, ERROR, Crasher: crash, 12", lines.get(0));
     }
 
     @Test

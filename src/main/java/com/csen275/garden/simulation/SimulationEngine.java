@@ -19,7 +19,7 @@ public class SimulationEngine {
         this.garden = garden;
         this.logger = logger;
         this.clock = new SimulationClock();
-        this.eventBus = new EventBus(logger);
+        this.eventBus = new EventBus(logger, garden::getLivingCount);
 
         for (GardenModule module : modules) {
             eventBus.subscribe(module);
