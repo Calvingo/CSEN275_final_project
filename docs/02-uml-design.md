@@ -41,10 +41,16 @@ flowchart LR
     Script --> UC11
     TA --> UC10
     TA --> UC11
-    UC5 -.-> Watering[Watering Subsystem]
-    UC6 -.-> Climate[Climate Subsystem]
-    UC7 -.-> Pest[Pest Control Subsystem]
+    UC4 -.-> Watering[Watering Subsystem]
+    UC4 -.-> Climate[Climate Subsystem]
+    UC4 -.-> Pest[Pest Control Subsystem]
+    UC4 -.-> Fertilizer[Fertilizer Subsystem]
+    UC5 -.-> Watering
+    UC6 -.-> Climate
+    UC7 -.-> Pest
 ```
+
+> **Note:** Manual fertilizer (`FertilizerSystem.applyManualFertilizer`) is a GUI-only override under UC4. The headless API exposes rain, temperature, and parasite events only.
 
 ---
 
@@ -53,54 +59,59 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Presentation
-        JavaFX[JavaFX UI]
+        UI[JavaFX UI / GardenUiSession]
         API[GardenSimulationAPI]
     end
 
     subgraph Application
-        SimEngine[SimulationEngine]
+        Engine[SimulationEngine]
         EventBus[EventBus]
     end
 
-    subgraph Domain
-        Garden[Garden / GardenGrid]
-        Plants[Plant Hierarchy]
-    end
-
     subgraph Subsystems
-        Water[WateringSystem]
+        Watering[WateringSystem]
         Climate[ClimateSystem]
-        PestCtrl[PestControlSystem]
+        Pest[PestControlSystem]
+        Fertilizer[FertilizerSystem]
     end
 
     subgraph Infrastructure
-        Log[LoggingService]
+        Logger[LoggingService]
         Config[ConfigLoader]
         Clock[SimulationClock]
     end
 
-    JavaFX --> SimEngine
-    JavaFX --> Garden
-    API --> SimEngine
-    API --> Garden
-    API --> Log
+    subgraph Domain
+        Garden[Garden / GardenGrid / Plot]
+        Plants[PlantType / PlantInstance]
+        Insects[Insect / Parasite]
+    end
 
-    SimEngine --> Clock
-    SimEngine --> EventBus
-    EventBus --> Water
+    UI --> Engine
+    API --> Engine
+    UI --> Config
+    API --> Config
+
+    Engine --> EventBus
+    Engine --> Clock
+    EventBus --> Watering
     EventBus --> Climate
-    EventBus --> PestCtrl
+    EventBus --> Pest
+    EventBus --> Fertilizer
 
-    Water --> Garden
+    Watering --> Garden
     Climate --> Garden
-    PestCtrl --> Garden
-    Garden --> Plants
+    Pest --> Garden
+    Fertilizer --> Garden
 
-    Config --> Garden
-    Water --> Log
-    Climate --> Log
-    PestCtrl --> Log
-    SimEngine --> Log
+    Garden --> Plants
+    Pest --> Insects
+
+    Engine --> Logger
+    Watering --> Logger
+    Climate --> Logger
+    Pest --> Logger
+    Fertilizer --> Logger
 ```
 
 ---
@@ -109,53 +120,104 @@ flowchart TB
 
 ```mermaid
 classDiagram
-    direction TB
-
     class GardenSimulationAPI {
         -SimulationEngine engine
         -Garden garden
         -LoggingService logger
         +initializeGarden()
-        +getPlants() Map~String,Object~
-        +rain(int amount)
-        +temperature(int fahrenheit)
-        +parasite(String name)
-        +getState()
+        +getPlants() Map
+        +rain(amount:int)
+        +temperature(fahrenheit:int)
+        +parasite(name:String)
+        +getState() void
     }
 
     class SimulationEngine {
         -SimulationClock clock
         -EventBus eventBus
-        -List~GardenModule~ modules
+        -Garden garden
         +start()
         +tickHour()
-        +onRain(int)
-        +onTemperature(int)
-        +onParasite(String)
+        +onRain(amount:int)
+        +onTemperature(temp:int)
+        +onParasite(name:String)
+        +getCurrentDay() int
+    }
+
+    class GardenModule {
+        <<interface>>
+        +onDayStart(day:int)
+        +onDayEnd(day:int)
+        +onEvent(event:GardenEvent)
+        +getName() String
+    }
+
+    class WateringSystem {
+        -boolean rainDuringCurrentDay
+        +handleRain(day:int, amount:int)
+        +activateSprinklers(day:int)
+        +resetDailyMoisture()
+    }
+
+    class ClimateSystem {
+        -int currentTempF
+        +setTemperature(day:int, temp:int)
+        +applyThermalStress(day:int)
+        +resetDaily(day:int)
+    }
+
+    class PestControlSystem {
+        -List~Parasite~ activeParasites
+        -Set~String~ treatedPlantIds
+        +triggerParasite(day:int, name:String)
+        +deployControl(day:int, name:String)
+        +tickInfestations(day:int)
+    }
+
+    class FertilizerSystem {
+        -int plotsTreatedToday
+        +fertilizeLowPlots(day:int)
+        +applyManualFertilizer(day:int)
+        +boostNutrientsAfterParasite(day:int)
+    }
+
+    class EventBus {
+        +publish(event:GardenEvent)
+        +subscribe(module:GardenModule)
+        +notifyDayStart(day:int)
+        +notifyDayEnd(day:int)
+    }
+
+    class LoggingService {
+        -Path logPath
+        +log(day:int, event:String, value:String, alive:int)
+        +logState(day:int, garden:Garden)
     }
 
     class Garden {
         -GardenGrid grid
-        -Map~String,PlantType~ plantTypes
         -List~PlantInstance~ livingPlants
-        +loadFromConfig(Config)
+        +loadFromConfig(config, definitions)
+        +tickDay() List
         +getLivingCount() int
         +getLivingPlants() List
-        +removeDead()
+        +removeDead() List
     }
 
     class GardenGrid {
-        -int rows, cols
+        -int rows
+        -int cols
         -Plot[][] plots
-        +getPlot(x,y) Plot
-        +placePlant(PlantInstance, x, y)
+        +getPlot(row:int, col:int) Plot
+        +placePlant(plant:PlantInstance, row:int, col:int) bool
     }
 
     class Plot {
         -PlantInstance plant
-        -double soilMoisture
-        -List~Sensor~ sensors
-        +applyWater(int)
+        -int soilMoisture
+        -int nutrientLevel
+        +applyWater(amount:int)
+        +applyFertilizer(amount:int)
         +tickDay()
     }
 
@@ -173,106 +235,101 @@ classDiagram
         +int health
         +int waterLevel
         +GrowthStage stage
-        +boolean isAlive
-        +applyStress(int)
-        +applyWater(int)
-        +tickNaturalRecovery()
+        +boolean alive
+        +applyStress(amount:int)
+        +applyWater(amount:int)
+        +applyRecovery(amount:int)
+        +tickDaily(nutrientLevel:int)
+        +tickNaturalRecovery(nutrientBonus:int)
     }
 
-    class GardenModule {
-        <<interface>>
-        +onDayStart(day)
-        +onDayEnd(day)
-        +onEvent(GardenEvent)
-        +getName() String
-    }
-
-    class WateringSystem {
-        -List~Sprinkler~ sprinklers
-        -double rainBoost
-        +activateSprinklers()
-        +handleRain(int)
-        +resetDailyMoisture()
-    }
-
-    class ClimateSystem {
-        -int currentTempF
-        -int defaultTempF
-        +setTemperature(int)
-        +resetDaily()
-        +applyThermalStress(Garden)
-    }
-
-    class PestControlSystem {
-        -Map~String,Infestation~ active
-        +triggerParasite(String)
-        +deployControl(String)
-        +tickInfestations()
-    }
-
-    class LoggingService {
-        -Path logPath
-        +log(day, event, value, alive)
-        +logState(Garden)
-    }
-
-    class EventBus {
-        +publish(GardenEvent)
-        +subscribe(GardenModule)
+    class Parasite {
+        +String name
+        +int damage
     }
 
     GardenSimulationAPI --> SimulationEngine
     GardenSimulationAPI --> Garden
     GardenSimulationAPI --> LoggingService
+
     SimulationEngine --> EventBus
-    SimulationEngine --> GardenModule
-    Garden --> GardenGrid
-    Garden --> PlantType
-    Garden --> PlantInstance
-    GardenGrid --> Plot
-    Plot --> PlantInstance
-    PlantType --> PlantInstance
-    WateringSystem ..|> GardenModule
-    ClimateSystem ..|> GardenModule
-    PestControlSystem ..|> GardenModule
+    SimulationEngine --> Garden
+
+    GardenModule <|.. WateringSystem
+    GardenModule <|.. ClimateSystem
+    GardenModule <|.. PestControlSystem
+    GardenModule <|.. FertilizerSystem
+
     WateringSystem --> Garden
     ClimateSystem --> Garden
     PestControlSystem --> Garden
+    FertilizerSystem --> Garden
+    PestControlSystem --> Parasite
+
     EventBus --> GardenModule
+    LoggingService --> Garden
+
+    Garden *-- GardenGrid
+    Garden *-- PlantInstance
+    GardenGrid *-- Plot
+    Plot --> PlantInstance
+    PlantType --> PlantInstance
 ```
 
 ---
 
 ## 4. Sequence Diagram — 24-Hour API Test Flow
 
+Each API environment call publishes an event, then advances one simulated day via `tickHour()`.
+
 ```mermaid
 sequenceDiagram
-    autonumber
     participant Script
     participant API as GardenSimulationAPI
     participant Engine as SimulationEngine
+    participant Bus as EventBus
+    participant Module as GardenModule
     participant Garden
-    participant Water as WateringSystem
-    participant Log as LoggingService
+    participant Logger as LoggingService
 
     Script->>API: initializeGarden()
-    API->>Garden: loadFromConfig(garden_config.json)
-    API->>Engine: start() // Day 0 begins
-    API->>Log: log(0, INIT, loaded, aliveCount)
+    API->>Garden: loadFromConfig(config, definitions)
+    API->>Engine: start()
+    Engine->>Logger: log(0, INIT, config_loaded, aliveCount)
 
     loop 24 simulated hours (= 24 days)
-        Script->>API: rain/temperature/parasite (random)
-        API->>Engine: dispatch event
-        Engine->>Water: onEvent(...)
-        Water->>Garden: update moisture / health
+        Script->>API: rain / temperature / parasite
+        alt Rain
+            API->>Engine: onRain(amount)
+            Engine->>Bus: publish(RAIN)
+            Bus->>Module: onEvent(RAIN)
+            Module->>Garden: apply water to plots
+        else Temperature
+            API->>Engine: onTemperature(temp)
+            Engine->>Bus: publish(TEMPERATURE)
+            Bus->>Module: onEvent(TEMPERATURE)
+            Module->>Module: setTemperature(day, temp)
+        else Parasite
+            API->>Engine: onParasite(name)
+            Engine->>Bus: publish(PARASITE)
+            Bus->>Module: onEvent(PARASITE)
+            Module->>Garden: apply stress to vulnerable plants
+        end
+
+        API->>Engine: tickHour()
+        Engine->>Bus: notifyDayStart(day)
+        Bus->>Module: onDayStart(day)
         Engine->>Garden: tickDay()
-        Garden->>Garden: removeDead()
-        Engine->>Log: log(day, EVENT, value, alive)
+        Garden->>Garden: plot.tickDay() + removeDead()
+        Engine->>Bus: notifyDayEnd(day)
+        Bus->>Module: onDayEnd(day)
+        Note over Module: sprinklers, thermal stress,<br/>fertilize low plots, tick infestations
+        Engine->>Engine: incrementDay()
     end
 
     Script->>API: getState()
-    API->>Garden: snapshot()
-    API->>Log: logState(snapshot)
+    API->>Logger: logState(day, garden)
+    Note over Script,Logger: Final state written to log.txt;<br/>Script may also call getPlants()
 ```
 
 ---
@@ -282,65 +339,78 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant API as GardenSimulationAPI
+    participant Engine as SimulationEngine
+    participant Bus as EventBus
     participant Pest as PestControlSystem
     participant Garden
     participant Plant as PlantInstance
     participant Log as LoggingService
 
-    API->>Pest: triggerParasite("aphid")
+    API->>Engine: onParasite("aphid")
+    Engine->>Bus: publish(PARASITE, aphid)
+    Bus->>Pest: onEvent(PARASITE)
     Pest->>Garden: getLivingPlants()
     loop each plant
-        Pest->>Plant: isVulnerable("aphid")?
+        Pest->>Plant: type.parasites contains aphid?
         alt vulnerable
             Pest->>Plant: applyStress(damage)
-            Pest->>Pest: recordInfestation(plant)
         end
     end
-    Pest->>Pest: deployControl() // no instant heal
     Pest->>Log: log(day, PARASITE, aphid, alive)
-    Note over Plant: gradual recovery via healRate on later ticks
+    Pest->>Pest: deployControl(day, aphid)
+    Note over Pest,Plant: partial recovery (+4 HP), not full heal
+    Pest->>Plant: applyRecovery(CONTROL_RECOVERY)
+    Pest->>Log: log(day, PEST_CONTROL, treated, alive)
+    Note over Plant: further recovery via healRate on later ticks
 ```
 
 ---
 
 ## 6. Activity Diagram — Simulated Day Loop (tickHour)
 
+Environment events (rain, temperature, parasite) are applied **before** `tickHour()` via `EventBus.publish()` when the API or GUI triggers them. Fertilizer runs automatically during `onDayEnd`.
+
 ```mermaid
 flowchart TD
-    Start([tickHour start]) --> IncDay[day++]
-    IncDay --> DayStart[each Module.onDayStart]
-    DayStart --> ProcessEnv{pending environment event?}
-    ProcessEnv -->|rain| HandleRain[WateringSystem.handleRain]
-    ProcessEnv -->|temperature| HandleTemp[ClimateSystem.setTemperature]
-    ProcessEnv -->|parasite| HandlePest[PestControlSystem.trigger]
-    ProcessEnv -->|none| ModuleTick
-    HandleRain --> ModuleTick
-    HandleTemp --> ModuleTick
-    HandlePest --> ModuleTick
-    ModuleTick[each Module daily logic] --> PlantTick[each Plant.tick + Plot.tick]
-    PlantTick --> RemoveDead[remove plants with health <= 0]
-    RemoveDead --> DayEnd[each Module.onDayEnd / reset daily state]
-    DayEnd --> LogEvent[LoggingService.log]
-    LogEvent --> End([end])
+    A([tickHour start]) --> B[EventBus.notifyDayStart day]
+    B --> C[Each module.onDayStart]
+    C --> D[Garden.tickDay]
+    D --> E[Each Plot.tickDay]
+    E --> F[Each PlantInstance.tickDaily]
+    F --> G[Remove plants with health <= 0]
+    G --> H[Log PLANT_DEATH entries]
+    H --> I[EventBus.notifyDayEnd day]
+    I --> J[WateringSystem: sprinklers + moisture reset]
+    I --> K[ClimateSystem: applyThermalStress + reset temp]
+    I --> L[PestControlSystem: tickInfestations]
+    I --> M[FertilizerSystem: fertilizeLowPlots]
+    J --> N[SimulationClock.incrementDay]
+    K --> N
+    L --> N
+    M --> N
+    N --> O([tickHour end])
 ```
 
 ---
 
 ## 7. State Diagram — PlantInstance Lifecycle
 
+Conceptual view aligned with `PlantInstance.updateStageFromHealth()`. New plants start in `GROWING` (not `SEEDLING`).
+
 ```mermaid
 stateDiagram-v2
-    [*] --> Seedling: created
-    Seedling --> Growing: health > 60
-    Growing --> Mature: sustained health
+    [*] --> Growing: created (health=100)
+    Growing --> Mature: health >= 80
+    Mature --> Growing: health 60-79
+    Growing --> Stressed: health 30-59
     Mature --> Stressed: drought / heat / pests
-    Stressed --> Recovering: conditions improve + natural recovery
-    Recovering --> Mature: health restored > 50
-    Stressed --> Dying: health <= 20
+    Stressed --> Recovering: water OK + tickNaturalRecovery
+    Recovering --> Mature: health >= 80
+    Recovering --> Growing: health 60-79
+    Stressed --> Dying: health < 30
+    Dying --> Recovering: conditions improve
     Dying --> Dead: health <= 0
     Dead --> [*]
-    Growing --> Stressed: environment worsens
-    Seedling --> Dead: extreme conditions
 ```
 
 ---
@@ -373,14 +443,15 @@ flowchart LR
 ```
 com.csen275.garden
 ├── api/           GardenSimulationAPI
-├── app/           GardenApp (JavaFX), HeadlessRunner
+├── app/           GardenApp (JavaFX), HeadlessSimulationRunner
 ├── config/        ConfigLoader, GardenConfig
 ├── domain/
 │   ├── garden/    Garden, GardenGrid, Plot
 │   ├── plant/     PlantType, PlantInstance, GrowthStage
+│   ├── insect/    Insect, Parasite
 │   └── sensor/    Sensor, Sprinkler, Thermometer
-├── module/        GardenModule, Watering, Climate, PestControl
-├── simulation/    SimulationEngine, SimulationClock, EventBus
+├── module/        GardenModule, Watering, Climate, PestControl, Fertilizer
+├── simulation/    SimulationEngine, SimulationClock, EventBus, EnvironmentEventGenerator
 ├── event/         GardenEvent, EventType
 ├── logging/       LoggingService
 └── ui/            controllers, views, help
@@ -394,7 +465,9 @@ com.csen275.garden
 |----------|-----------|
 | API and GUI share domain layer | Avoid duplicate logic; satisfy standalone API testing |
 | `GardenModule` interface | Meets “≥3 independent modules” grading requirement |
-| `EventBus` decoupling | Rain/climate/pest extensible and testable |
+| `EventBus` decoupling | Rain/climate/pest events routed to all modules without direct engine coupling |
+| Events before `tickHour()` | API methods publish environment events, then advance the simulated day |
 | `PlantType` vs `PlantInstance` | Type definition vs runtime instance; supports `getPlants()` |
+| Automatic vs manual fertilizer | Low-nutrient plots fertilized in `onDayEnd`; GUI can trigger manual override |
 | Relative paths for config/logs | Required by API specification |
-| Pest control without instant heal | Required by API spec; reflected in Stressed→Recovering state |
+| Pest control without instant full heal | `deployControl` applies partial recovery; full recovery is gradual via `healRate` |
