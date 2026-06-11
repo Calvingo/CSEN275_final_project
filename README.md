@@ -110,4 +110,4 @@ CSEN275_final_project/
 2. Cross-check course PDFs if behavior is unclear
 3. Coordinate in team chat — avoid two people on the same step/file
 
-Repository: https://github.com/Calvingo/CSEN275_final_project
+
