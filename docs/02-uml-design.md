@@ -323,13 +323,13 @@ sequenceDiagram
         Garden->>Garden: plot.tickDay() + removeDead()
         Engine->>Bus: notifyDayEnd(day)
         Bus->>Module: onDayEnd(day)
-        Note over Module: sprinklers, thermal stress,<br/>fertilize low plots, tick infestations
+        Note over Module: sprinklers, thermal stress, fertilize low plots, tick infestations
         Engine->>Engine: incrementDay()
     end
 
     Script->>API: getState()
     API->>Logger: logState(day, garden)
-    Note over Script,Logger: Final state written to log.txt;<br/>Script may also call getPlants()
+    Note over Script,Logger: Final state written to log.txt. Script may also call getPlants()
 ```
 
 ---
