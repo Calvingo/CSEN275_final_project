@@ -1,9 +1,31 @@
-# CSEN275 Final Project — Computerized Garden Simulation
+# Computerized Garden Simulation
 
-Automated garden simulation in Java (JavaFX + headless API).  
-Course repo for analysis, design, implementation, and grading.
+A full Java simulation of an automated garden — built for CSEN275 (Object-Oriented Programming) at Santa Clara University. The garden manages 10 plant types across a grid, runs four independent subsystems (watering, climate, pest control, and fertilizer), and exposes a clean API that a grader or test script can drive without touching the GUI.
 
-**Start here:** [`docs/04-team-execution-plan.md`](docs/04-team-execution-plan.md) — build steps in order (Step 0 → Step 16).
+---
+
+## Team
+
+| Name | GitHub |
+|------|--------|
+| Jiewen Chen | [@Calvingo](https://github.com/Calvingo) |
+| John Giannini | — |
+| Atishay Jain | — |
+| Liv Morgan | — |
+
+---
+
+## What we built
+
+- **10 plant types** loaded from a JSON config, each with its own water needs, heal rate, and parasite vulnerabilities
+- **4 subsystems** that subscribe to an EventBus and react every simulated day:
+  - `WateringSystem` — runs sprinklers, responds to rain events, resets soil moisture
+  - `ClimateSystem` — applies thermal stress for extreme temps (outside 50–95°F), resets at end of day
+  - `PestControlSystem` — infests only susceptible plants, runs gradual recovery (no instant heals)
+  - `FertilizerSystem` — monitors nutrient levels per plot, auto-fertilizes low plots, responds to parasite events with a recovery boost
+- **`GardenSimulationAPI`** — the six-method grader entry point: `initializeGarden()`, `getPlants()`, `rain()`, `temperature()`, `parasite()`, `getState()`
+- **JavaFX GUI** — live grid view, subsystem status panel, add-plant dialog, manual override buttons, speed slider, and an in-app log viewer
+- **84 tests**, all passing — unit, integration, endurance, and 24-day stress tests
 
 ---
 
@@ -11,7 +33,6 @@ Course repo for analysis, design, implementation, and grading.
 
 - Java 17+
 - Maven 3.8+
-- Git
 
 ```bash
 java -version
@@ -20,94 +41,77 @@ mvn -version
 
 ---
 
-## Quick start
+## Running the project
 
+**GUI (JavaFX):**
 ```bash
-git clone https://github.com/Calvingo/CSEN275_final_project.git
-cd CSEN275_final_project
-git pull origin main
+mvn javafx:run
 ```
 
-Follow **Step 0** in the execution plan to scaffold the Maven project, then continue in order.
-
----
-
-## How to read the files in this repo
-
-### Root
-
-| File / folder | Purpose |
-|---------------|---------|
-| `README.md` | This file — project overview and where to look |
-| `.gitignore` | Ignores build output (`target/`), `log.txt`, IDE files |
-| `docs/` | All planning and course reference documents |
-
-### `docs/` — read in this order
-
-| Document | When to read | What it contains |
-|----------|--------------|------------------|
-| [`Requirements.pdf`](docs/Requirements.pdf) | First | **Official course handout** — grading rules, JavaFX requirement, ≥3 modules, logging, 24h run |
-| [`Gardening System APIs.pdf`](docs/Gardening%20System%20APIs.pdf) | First | **Official API spec** — `GardenSimulationAPI` method signatures and test behavior |
-| [`01-requirements.md`](docs/01-requirements.md) | Planning | Our written requirements: features, user stories, FR/NFR, acceptance criteria |
-| [`02-uml-design.md`](docs/02-uml-design.md) | Planning / coding | UML diagrams: use case, class, sequence, activity, state, package structure |
-| [`03-implementation-plan.md`](docs/03-implementation-plan.md) | Planning | Architecture overview, phases, config examples, tech stack |
-| [`04-team-execution-plan.md`](docs/04-team-execution-plan.md) | **Daily work** | **Step-by-step build order**, tests per step, git workflow |
-
-**Rule of thumb:**
-
-- **Grading / “what must we build?”** → course PDFs + `01-requirements.md`
-- **Classes and relationships** → `02-uml-design.md`
-- **What to code today** → `04-team-execution-plan.md` (current step only)
-
----
-
-## Git workflow (team)
-
+**Headless API test (no GUI):**
 ```bash
-git pull origin main
-git checkout -b step-XX-short-description
-# do the work for that step
+mvn exec:java -Dexec.mainClass=com.csen275.garden.app.HeadlessSimulationRunner
+```
+
+**Or use the shell script:**
+```bash
+bash script/run-24h-test.sh
+```
+
+**All tests:**
+```bash
 mvn test
-git add .
-git commit -m "Step XX: short description"
-git push -u origin step-XX-short-description
 ```
 
-Open a **Pull Request** on GitHub → review → merge to `main`.  
-Do not skip steps in the execution plan; later steps depend on earlier ones.
+All file paths are relative, so run commands from the project root.
 
 ---
 
-## Build and run (after Step 0 is done)
-
-```bash
-mvn test                  # unit / integration tests
-mvn javafx:run            # GUI (after Step 13)
-bash script/run-24h-test.sh   # headless 24h test (after Step 12)
-```
-
----
-
-## Project layout (after Step 0)
+## Project layout
 
 ```
 CSEN275_final_project/
-├── README.md
-├── pom.xml
 ├── config/
-│   ├── garden_config.json
-│   └── plant_definitions.json
-├── docs/                 # planning & manuals
+│   ├── garden_config.json       # which plants to plant and how many
+│   └── plant_definitions.json   # water needs, heal rates, parasite vulnerabilities
+├── docs/
+│   ├── 01-requirements.md
+│   ├── 02-uml-design.md         # use case, class, object, activity, sequence diagrams
+│   ├── log-guide.md             # log.txt format reference
+│   └── user-manual.md           # in-app Help button reads this
+├── script/
+│   └── run-24h-test.sh
 ├── src/main/java/com/csen275/garden/
-└── src/test/java/
+│   ├── api/          # GardenSimulationAPI — grader entry point
+│   ├── app/          # GardenApp, GardenLauncher, HeadlessSimulationRunner
+│   ├── config/       # JSON config loader and POJOs
+│   ├── domain/       # Garden, GardenGrid, Plot, PlantInstance, PlantType, sensors, insects
+│   ├── event/        # EventBus, GardenEvent, EventType
+│   ├── logging/      # LoggingService (writes log.txt)
+│   ├── module/       # WateringSystem, ClimateSystem, PestControlSystem, FertilizerSystem
+│   ├── simulation/   # SimulationEngine, SimulationClock, EnvironmentEventGenerator
+│   └── ui/           # MainController, AddPlantDialog, GardenUiSession
+└── src/test/java/    # 17 test classes, 84 tests
 ```
 
 ---
 
-## Questions?
+## How it works
 
-1. Check the **current step** in `docs/04-team-execution-plan.md`
-2. Cross-check course PDFs if behavior is unclear
-3. Coordinate in team chat — avoid two people on the same step/file
+Each simulated day runs through one call to `tickHour()`:
 
+1. `EventBus` notifies all four modules of day start
+2. Every plot ticks (soil moisture drops, nutrients deplete, plants take or recover health)
+3. Dead plants are removed and logged as `PLANT_DEATH`
+4. `EventBus` notifies all four modules of day end — sprinklers fire, thermal stress applies, pests tick, low-nutrient plots get fertilized
+5. The clock advances
 
+Rain, temperature, and parasite events arrive before the tick (via the API or GUI) and are published to the bus immediately so the right module handles them.
+
+---
+
+## Docs
+
+- **UML diagrams** (use case, class, object, activity, sequence): [`docs/02-uml-design.md`](docs/02-uml-design.md)
+- **Log format**: [`docs/log-guide.md`](docs/log-guide.md)
+- **User manual**: [`docs/user-manual.md`](docs/user-manual.md) (also accessible from the Help button in the app)
