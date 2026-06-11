@@ -13,35 +13,24 @@ public class Garden {
 
     private GardenGrid grid;
     private List<PlantInstance> livingPlants;
-    private int nextRow;
-    private int nextCol;
 
     public Garden() {
         this.grid = new GardenGrid(5, 5);
         this.livingPlants = new ArrayList<PlantInstance>();
-        this.nextRow = 0;
-        this.nextCol = 0;
     }
 
     public boolean placePlantOnGrid(PlantInstance plant) {
-        // Find the next open slot
-        while (nextRow < grid.getRows()) {
-            if (grid.placePlant(plant, nextRow, nextCol)) {
-                livingPlants.add(plant);
-                advance();
-                return true;
+        // Scan for the first open slot every time so plots freed by plant death are reused
+        // and adds keep working as long as any plot is empty.
+        for (int row = 0; row < grid.getRows(); row++) {
+            for (int col = 0; col < grid.getCols(); col++) {
+                if (grid.placePlant(plant, row, col)) {
+                    livingPlants.add(plant);
+                    return true;
+                }
             }
-            advance();
         }
         return false;
-    }
-
-    private void advance() {
-        nextCol++;
-        if (nextCol >= grid.getCols()) {
-            nextCol = 0;
-            nextRow++;
-        }
     }
 
     public List<String> removeDead() {

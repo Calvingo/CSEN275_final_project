@@ -25,11 +25,15 @@ public class PestControlSystem implements GardenModule {
     private List<Parasite> activeParasites;
     private Set<String> treatedPlantIds;
 
+    // Parasites handled on the latest day, retained past the daily clear for the UI.
+    private List<String> lastActiveParasites;
+
     public PestControlSystem(Garden garden, LoggingService logger) {
         this.garden = garden;
         this.logger = logger;
         this.activeParasites = new ArrayList<Parasite>();
         this.treatedPlantIds = new HashSet<String>();
+        this.lastActiveParasites = new ArrayList<String>();
     }
 
     @Override
@@ -106,6 +110,9 @@ public class PestControlSystem implements GardenModule {
     }
 
     public void tickInfestations(int day) {
+        // Snapshot every day (empty when nothing is active) so the UI reflects the current tick.
+        lastActiveParasites = getActiveParasites();
+
         if (activeParasites.isEmpty()) {
             return;
         }
@@ -133,5 +140,9 @@ public class PestControlSystem implements GardenModule {
             names.add(parasite.getName());
         }
         return names;
+    }
+
+    public List<String> getLastActiveParasites() {
+        return lastActiveParasites;
     }
 }

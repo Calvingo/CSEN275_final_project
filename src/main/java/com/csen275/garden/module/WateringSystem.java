@@ -17,10 +17,16 @@ public class WateringSystem implements GardenModule {
     private LoggingService logger;
     private boolean rainDuringCurrentDay;
 
+    // Snapshot of the latest day's watering activity, kept past the daily reset for the UI.
+    private boolean rainedLastDay;
+    private int lastSprinkledCount;
+
     public WateringSystem(Garden garden, LoggingService logger) {
         this.garden = garden;
         this.logger = logger;
         this.rainDuringCurrentDay = false;
+        this.rainedLastDay = false;
+        this.lastSprinkledCount = 0;
     }
 
     @Override
@@ -41,6 +47,7 @@ public class WateringSystem implements GardenModule {
             resetDailyMoisture();
         }
 
+        rainedLastDay = rainDuringCurrentDay;
         rainDuringCurrentDay = false;
     }
 
@@ -65,12 +72,14 @@ public class WateringSystem implements GardenModule {
 
     public void activateSprinklers(int day) {
         List<Plot> plots = garden.getGrid().getAllPlots();
+        lastSprinkledCount = 0;
 
         for (int row = 0; row < garden.getGrid().getRows(); row++) {
             for (int col = 0; col < garden.getGrid().getCols(); col++) {
                 Plot plot = garden.getGrid().getPlot(row, col);
                 if (plot.getSoilMoisture() < DRY_THRESHOLD) {
                     plot.applyWater(SPRINKLER_WATER_AMOUNT);
+                    lastSprinkledCount++;
                     logger.log(
                         day,
                         "SPRINKLER",
@@ -94,5 +103,13 @@ public class WateringSystem implements GardenModule {
 
     public boolean isRainedToday() {
         return rainDuringCurrentDay;
+    }
+
+    public boolean rainedLastDay() {
+        return rainedLastDay;
+    }
+
+    public int getLastSprinkledCount() {
+        return lastSprinkledCount;
     }
 }

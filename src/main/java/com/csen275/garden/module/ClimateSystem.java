@@ -22,10 +22,17 @@ public class ClimateSystem implements GardenModule {
     private boolean heatingActive;
     private boolean coolingActive;
 
+    // Snapshot of the most recent day's climate, kept past the daily reset so the UI
+    // can show what actually happened on the latest tick.
+    private int lastTempF;
+    private boolean lastHeatingActive;
+    private boolean lastCoolingActive;
+
     public ClimateSystem(Garden garden, LoggingService logger) {
         this.garden = garden;
         this.logger = logger;
         this.currentTempF = DEFAULT_TEMP;
+        this.lastTempF = DEFAULT_TEMP;
         this.heatingActive = false;
         this.coolingActive = false;
     }
@@ -43,6 +50,10 @@ public class ClimateSystem implements GardenModule {
     @Override
     public void onDayEnd(int day) {
         applyThermalStress(day);
+        // Preserve what this day looked like before the reset wipes it, so status stays current.
+        lastTempF = currentTempF;
+        lastHeatingActive = heatingActive;
+        lastCoolingActive = coolingActive;
         resetDaily(day);
     }
 
@@ -81,13 +92,14 @@ public class ClimateSystem implements GardenModule {
 
         for (PlantInstance plant : plants) {
             if (currentTempF > HOT_THRESHOLD) {
-                int stress = (currentTempF - HOT_THRESHOLD) / 5;
-                if (stress < 1) {
-                    stress = 1;
-                }
+                // Heat stress scales with how far above the hot threshold we are. The base is
+                // tuned so that — even after climate control and same-day natural recovery —
+                // every plant type takes a meaningful net hit (heal rates top out at 4).
+                int stress = 4 + (currentTempF - HOT_THRESHOLD) / 5;   // 96°F->4, 105°F->6, 120°F->9
                 if (coolingActive) {
-                    stress = Math.max(1, stress / 2);
+                    stress -= 1;                                       // climate control shaves a little off
                 }
+                stress = Math.max(2, Math.min(5, stress));            // net 2-5 HP per heat wave
                 plant.applyStress(stress);
             } else if (currentTempF < COLD_THRESHOLD) {
                 int stress = (COLD_THRESHOLD - currentTempF) / 5;
@@ -121,5 +133,17 @@ public class ClimateSystem implements GardenModule {
 
     public boolean isCoolingActive() {
         return coolingActive;
+    }
+
+    public int getLastTempF() {
+        return lastTempF;
+    }
+
+    public boolean isLastHeatingActive() {
+        return lastHeatingActive;
+    }
+
+    public boolean isLastCoolingActive() {
+        return lastCoolingActive;
     }
 }

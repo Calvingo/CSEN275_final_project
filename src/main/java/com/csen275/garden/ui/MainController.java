@@ -3,6 +3,8 @@ package com.csen275.garden.ui;
 import com.csen275.garden.domain.garden.GardenGrid;
 import com.csen275.garden.domain.garden.Plot;
 import com.csen275.garden.domain.plant.PlantInstance;
+import com.csen275.garden.module.ClimateSystem;
+import com.csen275.garden.module.WateringSystem;
 import com.csen275.garden.simulation.EnvironmentEventGenerator;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -41,6 +43,31 @@ public class MainController {
     private static final int LOG_TAIL_LINES = 50;
     private static final String USER_MANUAL_PATH = "docs/user-manual.md";
 
+    // Every parasite the simulation understands; each only harms plants susceptible to it.
+    private static final String[] PARASITE_TYPES = {
+        "aphid", "spider_mite", "thrip", "whitefly", "hornworm", "bark_beetle", "slug"
+    };
+
+    // Nature-themed sky-to-grass backdrop for the whole window.
+    private static final String ROOT_BACKGROUND =
+        "-fx-background-color: linear-gradient(to bottom, #add8f0 0%, #cfe8b0 45%, #8bc34a 100%);";
+
+    // Shared toolbar/panel card styling.
+    private static final String BAR_STYLE =
+        "-fx-background-color: rgba(46, 78, 32, 0.82); -fx-background-radius: 10; -fx-padding: 8;";
+    private static final String ACTION_BUTTON_STYLE =
+        "-fx-background-color: linear-gradient(to bottom, #66bb6a, #43a047); -fx-text-fill: white; "
+        + "-fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;";
+    private static final String PARASITE_BUTTON_STYLE =
+        "-fx-background-color: linear-gradient(to bottom, #ef7d6a, #c0392b); -fx-text-fill: white; "
+        + "-fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;";
+    private static final String CARD_STYLE =
+        "-fx-background-color: rgba(255, 252, 245, 0.92); -fx-background-radius: 10; "
+        + "-fx-border-color: #8d6e63; -fx-border-width: 1.5; -fx-border-radius: 10;";
+    // Light backing so the speed slider's tick marks and number labels stay readable.
+    private static final String SPEED_CHIP_STYLE =
+        "-fx-background-color: rgba(255, 252, 245, 0.92); -fx-background-radius: 8; -fx-padding: 2 10 2 10;";
+
     private final GardenUiSession session = new GardenUiSession();
     private final Random random = new Random();
 
@@ -68,6 +95,7 @@ public class MainController {
     private BorderPane buildRoot() {
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(10));
+        root.setStyle(ROOT_BACKGROUND);
         root.setTop(buildToolbar());
         root.setCenter(buildGardenView());
         root.setRight(buildStatusPanel());
@@ -75,57 +103,79 @@ public class MainController {
         return root;
     }
 
-    private HBox buildToolbar() {
-        Button initializeButton = new Button("Initialize");
-        initializeButton.setOnAction(e -> handleInitialize());
+    private VBox buildToolbar() {
+        Button initializeButton = actionButton("Initialize", e -> handleInitialize());
 
-        startPauseButton = new Button("Start");
+        startPauseButton = actionButton("Start", e -> toggleSimulation());
         startPauseButton.setTooltip(new Tooltip("Auto-advance days with random rain, heat waves, or parasite outbreaks"));
-        startPauseButton.setOnAction(e -> toggleSimulation());
 
-        Button manualWaterButton = new Button("Manual Water");
-        manualWaterButton.setOnAction(e -> handleManualWater());
-
-        Button manualFertilizerButton = new Button("Apply Fertilizer");
-        manualFertilizerButton.setOnAction(e -> handleManualFertilizer());
-
-        Button addPlantButton = new Button("Add Plant");
-        addPlantButton.setOnAction(e -> handleAddPlant());
-
-        Button rainButton = new Button("Rain (15)");
-        rainButton.setOnAction(e -> handleRain(15));
-
-        Button heatButton = new Button("Heat (105°F)");
-        heatButton.setOnAction(e -> handleTemperature(105));
-
-        Button parasiteButton = new Button("Parasite (aphid)");
-        parasiteButton.setOnAction(e -> handleParasite("aphid"));
-
-        Button stateButton = new Button("Log State");
-        stateButton.setOnAction(e -> handleLogState());
-
-        Button helpButton = new Button("Help");
-        helpButton.setOnAction(e -> showHelp());
+        Button manualWaterButton = actionButton("Manual Water", e -> handleManualWater());
+        Button manualFertilizerButton = actionButton("Apply Fertilizer", e -> handleManualFertilizer());
+        Button addPlantButton = actionButton("Add Plant", e -> handleAddPlant());
+        Button rainButton = actionButton("Rain (15)", e -> handleRain(15));
+        Button heatButton = actionButton("Heat (105°F)", e -> handleTemperature(105));
+        Button stateButton = actionButton("Log State", e -> handleLogState());
+        Button helpButton = actionButton("Help", e -> showHelp());
 
         dayLabel = new Label("Day: —");
         aliveLabel = new Label("Plants alive: —");
+        dayLabel.setTextFill(Color.WHITE);
+        aliveLabel.setTextFill(Color.WHITE);
+        dayLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
+        aliveLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
 
         Label speedLabel = new Label("Speed:");
+        speedLabel.setTextFill(Color.web("#2e4e20"));
+        speedLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
         Slider speedSlider = new Slider(0.5, 4.0, 1.0);
         speedSlider.setShowTickLabels(true);
         speedSlider.setShowTickMarks(true);
         speedSlider.setMajorTickUnit(1.0);
+        speedSlider.setMinorTickCount(1);
         speedSlider.setBlockIncrement(0.5);
+        speedSlider.setPrefWidth(170);
+        // Dark tick marks/labels are unreadable on the dark toolbar, so seat the speed
+        // control on a light chip where the default dark text shows clearly.
+        speedSlider.setStyle("-fx-tick-label-fill: #2e4e20; -fx-text-fill: #2e4e20;");
+        HBox speedBox = new HBox(6, speedLabel, speedSlider);
+        speedBox.setAlignment(Pos.CENTER_LEFT);
+        speedBox.setStyle(SPEED_CHIP_STYLE);
         speedSlider.valueProperty().addListener((obs, oldVal, newVal) -> updateSimulationSpeed(newVal.doubleValue()));
 
-        HBox toolbar = new HBox(8,
+        Region spacer = new Region();
+        HBox mainBar = new HBox(8,
             initializeButton, startPauseButton, manualWaterButton, manualFertilizerButton, addPlantButton,
-            rainButton, heatButton, parasiteButton, stateButton, helpButton,
-            new Region(), dayLabel, aliveLabel, speedLabel, speedSlider
+            rainButton, heatButton, stateButton, helpButton,
+            spacer, dayLabel, aliveLabel, speedBox
         );
-        toolbar.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(toolbar.getChildren().get(toolbar.getChildren().size() - 4), Priority.ALWAYS);
+        mainBar.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // One button per parasite; each only damages plants susceptible to that pest.
+        Label parasiteLabel = new Label("Parasites:");
+        parasiteLabel.setTextFill(Color.WHITE);
+        parasiteLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
+
+        HBox parasiteBar = new HBox(6, parasiteLabel);
+        parasiteBar.setAlignment(Pos.CENTER_LEFT);
+        for (final String parasite : PARASITE_TYPES) {
+            Button button = new Button(parasite);
+            button.setStyle(PARASITE_BUTTON_STYLE);
+            button.setTooltip(new Tooltip("Trigger a " + parasite + " outbreak (only susceptible plants are harmed)"));
+            button.setOnAction(e -> handleParasite(parasite));
+            parasiteBar.getChildren().add(button);
+        }
+
+        VBox toolbar = new VBox(8, mainBar, parasiteBar);
+        toolbar.setStyle(BAR_STYLE);
         return toolbar;
+    }
+
+    private Button actionButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
+        Button button = new Button(text);
+        button.setStyle(ACTION_BUTTON_STYLE);
+        button.setOnAction(handler);
+        return button;
     }
 
     private ScrollPane buildGardenView() {
@@ -145,21 +195,28 @@ public class MainController {
         ScrollPane scrollPane = new ScrollPane(gardenGrid);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
+        // Let the nature background show through instead of the default gray viewport.
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
         return scrollPane;
     }
 
     private StackPane createEmptyCell(int row, int col) {
-        Label label = new Label("Empty");
+        Label label = new Label("empty plot");
         label.setFont(Font.font("System", FontWeight.BOLD, 11));
-        label.setTextFill(Color.web("#555555"));
+        label.setTextFill(Color.web("#f0e6d2"));
 
         StackPane cell = new StackPane(label);
         cell.setMinSize(110, 90);
         cell.setPrefSize(110, 90);
-        cell.setStyle("-fx-background-color: #e8e8e8; -fx-border-color: #bdbdbd; -fx-border-width: 1; -fx-background-radius: 4; -fx-border-radius: 4;");
+        cell.setStyle(EMPTY_CELL_STYLE);
         cell.setUserData(new int[] { row, col });
         return cell;
     }
+
+    // Brown tilled-soil look for an empty plot.
+    private static final String EMPTY_CELL_STYLE =
+        "-fx-background-color: linear-gradient(to bottom, #8b5a2b, #5d3a1a); "
+        + "-fx-border-color: #4a2e15; -fx-border-width: 1.5; -fx-background-radius: 6; -fx-border-radius: 6;";
 
     private VBox buildStatusPanel() {
         wateringStatus = new Label("Watering: not initialized");
@@ -172,13 +229,15 @@ public class MainController {
         pestStatus.setWrapText(true);
         fertilizerStatus.setWrapText(true);
 
-        Label title = new Label("Subsystems");
+        Label title = new Label("🌻 Subsystems");
         title.setFont(Font.font("System", FontWeight.BOLD, 14));
 
         VBox panel = new VBox(12, title, wateringStatus, climateStatus, pestStatus, fertilizerStatus);
-        panel.setPadding(new Insets(10, 10, 10, 20));
+        panel.setPadding(new Insets(14));
         panel.setMinWidth(220);
         panel.setMaxWidth(260);
+        panel.setStyle(CARD_STYLE);
+        BorderPane.setMargin(panel, new Insets(0, 0, 0, 10));
         return panel;
     }
 
@@ -194,7 +253,9 @@ public class MainController {
 
         VBox panel = new VBox(6, logTitle, logArea);
         VBox.setVgrow(logArea, Priority.ALWAYS);
-        panel.setPadding(new Insets(10, 0, 0, 0));
+        panel.setPadding(new Insets(12));
+        panel.setStyle(CARD_STYLE);
+        BorderPane.setMargin(panel, new Insets(10, 0, 0, 0));
         return panel;
     }
 
@@ -389,18 +450,18 @@ public class MainController {
         Label label = (Label) cell.getChildren().get(0);
 
         if (plant == null || !plant.isAlive()) {
-            label.setText("Empty");
-            label.setTextFill(Color.web("#666666"));
-            cell.setStyle("-fx-background-color: #ececec; -fx-border-color: #bdbdbd; -fx-border-width: 1; -fx-background-radius: 4; -fx-border-radius: 4;");
+            label.setText("empty plot");
+            label.setTextFill(Color.web("#f0e6d2"));
+            cell.setStyle(EMPTY_CELL_STYLE);
             clearCellTooltip(cell);
             return;
         }
 
         String name = plant.getType().getName();
         int health = plant.getHealth();
-        label.setText(name + "\nHP " + health);
-        label.setTextFill(Color.web("#1b1b1b"));
-        cell.setStyle("-fx-background-color: " + toHex(healthColor(health)) + "; -fx-border-color: #616161; -fx-border-width: 1; -fx-background-radius: 4; -fx-border-radius: 4;");
+        label.setText(healthIcon(health) + " " + name + "\nHP " + health);
+        label.setTextFill(Color.WHITE);
+        cell.setStyle(plantCellStyle(health));
 
         String tooltipText = String.format(
             "%s at (%d,%d)%nHealth: %d%nWater: %d / %d%nNutrients: %d%nSoil moisture: %d%nStage: %s",
@@ -420,21 +481,28 @@ public class MainController {
         }
     }
 
-    private Color healthColor(int health) {
+    // Healthy = lush green, medium = yellowing, critical = wilting red — as a soil-bordered gradient tile.
+    private String plantCellStyle(int health) {
+        String fill;
         if (health >= 60) {
-            return Color.web("#81c784");
+            fill = "linear-gradient(to bottom, #66bb6a, #2e7d32)";
+        } else if (health >= 30) {
+            fill = "linear-gradient(to bottom, #ffee58, #f9a825)";
+        } else {
+            fill = "linear-gradient(to bottom, #ef5350, #b71c1c)";
         }
-        if (health >= 30) {
-            return Color.web("#fff176");
-        }
-        return Color.web("#e57373");
+        return "-fx-background-color: " + fill + "; -fx-border-color: #4a2e15; -fx-border-width: 1.5; "
+            + "-fx-background-radius: 6; -fx-border-radius: 6;";
     }
 
-    private String toHex(Color color) {
-        return String.format("#%02x%02x%02x",
-            (int) (color.getRed() * 255),
-            (int) (color.getGreen() * 255),
-            (int) (color.getBlue() * 255));
+    private String healthIcon(int health) {
+        if (health >= 60) {
+            return "🌿"; // herb / lush plant
+        }
+        if (health >= 30) {
+            return "🌱"; // seedling / stressed
+        }
+        return "🥀"; // wilted flower / critical
     }
 
     private void refreshStatus() {
@@ -446,14 +514,25 @@ public class MainController {
             return;
         }
 
-        String rainStatus = session.getWateringSystem().isRainedToday() ? "rain absorbed today" : "monitoring soil moisture";
+        // Read the persisted last-day snapshots: the engine resets live per-day state inside the
+        // same tick, so these reflect what actually happened on the most recent event.
+        WateringSystem watering = session.getWateringSystem();
+        String rainStatus;
+        if (watering.rainedLastDay()) {
+            rainStatus = "rain absorbed last day";
+        } else if (watering.getLastSprinkledCount() > 0) {
+            rainStatus = "sprinklers watered " + watering.getLastSprinkledCount() + " plot(s)";
+        } else {
+            rainStatus = "monitoring soil moisture";
+        }
         wateringStatus.setText("Watering: active — " + rainStatus);
 
-        climateStatus.setText("Climate: " + session.getClimateSystem().getCurrentTempF() + "°F"
-            + (session.getClimateSystem().isHeatingActive() ? " (heating on)" : "")
-            + (session.getClimateSystem().isCoolingActive() ? " (cooling on)" : ""));
+        ClimateSystem climate = session.getClimateSystem();
+        climateStatus.setText("Climate: " + climate.getLastTempF() + "°F"
+            + (climate.isLastHeatingActive() ? " (heating on)" : "")
+            + (climate.isLastCoolingActive() ? " (cooling on)" : ""));
 
-        List<String> active = session.getPestControlSystem().getActiveParasites();
+        List<String> active = session.getPestControlSystem().getLastActiveParasites();
         if (active.isEmpty()) {
             pestStatus.setText("Pest control: no active infestations");
         } else {
