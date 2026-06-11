@@ -116,7 +116,85 @@ flowchart TB
 
 ---
 
-## 3. Class Diagram (Core)
+## 3. Object Diagram — Runtime Snapshot (after initializeGarden)
+
+Concrete object instances and links at startup, before the first simulated day tick.
+
+```mermaid
+classDiagram
+    direction TB
+
+    class api<<instance>> {
+        GardenSimulationAPI
+    }
+    class logger<<instance>> {
+        LoggingService
+    }
+    class garden<<instance>> {
+        Garden
+    }
+    class grid<<instance>> {
+        GardenGrid
+        rows=5 cols=5
+    }
+    class plot00<<instance>> {
+        Plot(0,0)
+        soilMoisture=20
+    }
+    class rose1<<instance>> {
+        PlantInstance
+        name=Rose health=100
+    }
+    class engine<<instance>> {
+        SimulationEngine
+    }
+    class clock<<instance>> {
+        SimulationClock
+        currentDay=0
+    }
+    class bus<<instance>> {
+        EventBus
+    }
+    class watering<<instance>> {
+        WateringSystem
+    }
+    class climate<<instance>> {
+        ClimateSystem
+    }
+    class pest<<instance>> {
+        PestControlSystem
+    }
+    class fertilizer<<instance>> {
+        FertilizerSystem
+    }
+
+    api --> garden : garden
+    api --> engine : engine
+    api --> logger : logger
+    engine --> garden : garden
+    engine --> clock : clock
+    engine --> bus : eventBus
+    garden --> grid : grid
+    grid --> plot00 : plots[0][0]
+    plot00 --> rose1 : plant
+    bus --> watering : subscriber
+    bus --> climate : subscriber
+    bus --> pest : subscriber
+    bus --> fertilizer : subscriber
+    watering --> garden : garden
+    climate --> garden : garden
+    pest --> garden : garden
+    fertilizer --> garden : garden
+    watering --> logger : logger
+    climate --> logger : logger
+    pest --> logger : logger
+    fertilizer --> logger : logger
+    engine --> logger : logger
+```
+
+---
+
+## 4. Class Diagram (Core)
 
 ```mermaid
 classDiagram
@@ -278,7 +356,7 @@ classDiagram
 
 ---
 
-## 4. Sequence Diagram — 24-Hour API Test Flow
+## 5. Sequence Diagram — 24-Hour API Test Flow
 
 Each API environment call publishes an event, then advances one simulated day via `tickHour()`.
 
@@ -334,7 +412,7 @@ sequenceDiagram
 
 ---
 
-## 5. Sequence Diagram — Parasite Handling
+## 6. Sequence Diagram — Parasite Handling
 
 ```mermaid
 sequenceDiagram
@@ -366,7 +444,7 @@ sequenceDiagram
 
 ---
 
-## 6. Activity Diagram — Simulated Day Loop (tickHour)
+## 7. Activity Diagram — Simulated Day Loop (tickHour)
 
 Environment events (rain, temperature, parasite) are applied **before** `tickHour()` via `EventBus.publish()` when the API or GUI triggers them. Fertilizer runs automatically during `onDayEnd`.
 
@@ -393,7 +471,7 @@ flowchart TD
 
 ---
 
-## 7. State Diagram — PlantInstance Lifecycle
+## 8. State Diagram — PlantInstance Lifecycle
 
 Conceptual view aligned with `PlantInstance.updateStageFromHealth()`. New plants start in `GROWING` (not `SEEDLING`).
 
@@ -415,7 +493,7 @@ stateDiagram-v2
 
 ---
 
-## 8. Deployment View (Logical)
+## 9. Deployment View (Logical)
 
 ```mermaid
 flowchart LR
@@ -438,7 +516,7 @@ flowchart LR
 
 ---
 
-## 9. Recommended Package Structure
+## 10. Recommended Package Structure
 
 ```
 com.csen275.garden
@@ -459,7 +537,7 @@ com.csen275.garden
 
 ---
 
-## 10. Design Decision Summary
+## 11. Design Decision Summary
 
 | Decision | Rationale |
 |----------|-----------|
