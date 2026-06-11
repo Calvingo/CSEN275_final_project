@@ -6,12 +6,7 @@ A full Java simulation of an automated garden — built for CSEN275 (Object-Orie
 
 ## Team
 
-| Name | GitHub |
-|------|--------|
-| Jiewen Chen | [@Calvingo](https://github.com/Calvingo) |
-| John Giannini | — |
-| Atishay Jain | — |
-| Liv Morgan | — |
+Jiewen Chen, John Giannini, Atishay Jain, Liv Morgan
 
 ---
 
